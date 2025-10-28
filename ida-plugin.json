@@ -4,9 +4,7 @@
     "name": "Driver Buddy Revolutions",
     "entryPoint": "DriverBuddyRevolutions.py",
     "categories": [
-      "debugging-and-tracing",
-      "reverse-engineering-helpers",
-      "kernel-and-driver-analysis"
+      "vulnerability-research-and-exploit-development"
     ],
     "logoPath": "driver_buddy_logo.png",
     "idaVersions": ">=7.5",
