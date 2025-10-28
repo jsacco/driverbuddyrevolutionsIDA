@@ -100,3 +100,7 @@ See it in action here (In IDA Pro)
 
 And in example the HTML report:
 <img src="https://i.imgur.com/Hsx54Xn.png">
+
+
+#### Creditz:
+Base in Driver Buddy https://github.com/nccgroup/DriverBuddy and Driver Buddy Reloaded: https://github.com/VoidSec/DriverBuddyReloaded
