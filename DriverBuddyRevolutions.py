@@ -1,4 +1,3 @@
-# DriverBuddyRevolutions.py
 # Driver Buddy Revolutions
 # Single-file IDA plugin implementing useful heuristics for Windows driver triage
 #
@@ -570,7 +569,7 @@ def detect_irql_misuse_in_func(func_ea):
                     issues.append("Potential IRQL misuse: %s at 0x%X" % (tgt, ea))
     return issues
 
-# ---------------------------- Taint propagation (simple) ----------------------------
+# ---------------------------- Taint analisys ----------------------------
 
 def taint_from_ioctl_dispatch(ioctl_handlers, sinks=SINKS, max_depth=5):
     results = {}
@@ -675,7 +674,6 @@ def call_is_c_function(callee_name):
     return base.lower() in _c_functions_lc
 
 # ---------------------------- POC / Fuzzer generator ----------------------------
-# FIXED: use .format() for both header & body, escape { } and % so Python doesn't treat them as placeholders.
 
 def generate_ioctl_poc_c(ioctls, outpath=POC_C_FILE, device_path="\\\\.\\PUT_DEVICE_NAME_HERE"):
     """
@@ -726,7 +724,7 @@ def generate_ioctl_poc_c(ioctls, outpath=POC_C_FILE, device_path="\\\\.\\PUT_DEV
         ida_kernwin.msg("[!] Failed to write POC C file: %s\n" % str(e))
         return None
 
-# ---------------------------- HTML report generator (simple clickable) ----------------------------
+# ---------------------------- HTML report generator ----------------------------
 
 def make_html_report(findings, outpath=HTML_REPORT_FILE):
     def ea_link(ea):
@@ -787,11 +785,11 @@ def run_full_analysis():
     start=time.time()
     results = {}
     try:
-        ida_kernwin.msg("[*] Driver Buddy Revs - starting full analysis...\n")
+        ida_kernwin.msg("[*] Driver Buddy Revolutions - Starting analysis...\n")
         idc.auto_wait()
 
         findings_lines = []
-        findings_lines.append("[#] Driver Buddy Revolutions - Full analysis")
+        findings_lines.append("[#] Driver Buddy Revolutions - Analysis completed")
         findings_lines.append("-----------------------------------------------")
 
         file_type = idaapi.get_file_type_name()
@@ -1027,3 +1025,4 @@ class driver_buddy_revolutions_full_t(idaapi.plugin_t):
 
 def PLUGIN_ENTRY():
     return driver_buddy_revolutions_full_t()
+
