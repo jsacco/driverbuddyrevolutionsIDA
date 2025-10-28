@@ -1,5 +1,5 @@
 ## Driver Buddy Revolutions is an IDA Pro plugin that automates common Windows kernel driver research. 
-### Author: Juan Sacco <jsacco@exploitpack.com>
+### Author: Juan Sacco <support@exploitpack.com>
 
 Install it by copying DriverBuddyRevolutions.py into your plugins/ directory or running it as a script. 
 Hotkey: Shift-A.
