@@ -1,15 +1,16 @@
 {
-  "name": "Driver Buddy Revolutions",
-  "id": "driver-buddy-revolutions",
-  "filename": "DriverBuddyRevolutions.py",
-  "description": "IDA Pro plugin for rapid Windows kernel driver triage. Finds IOCTL handlers, device names, pool tags, risky memory usage, IRQL issues and taint paths; generates HTML/JSON reports and IOCTL PoC stubs.",
-  "version": "1.0.0",
-  "date": "2025-10-24",
-  "author": "Juan Sacco",
-  "url": "https://github.com/your-org-or-user/DriverBuddyRevolutions",
-  "license": "MIT",
-  "ida_min_version": "7.5",
-  "ida_max_version": "8.5",
-  "hotkey": "Shift-A",
-  "entrypoint": "PLUGIN_ENTRY"
+  "IDAMetadataDescriptorVersion": 1,
+  "plugin": {
+    "name": "Driver Buddy Revolutions",
+    "entryPoint": "DriverBuddyRevolutions.py",
+    "categories": [
+      "debugging-and-tracing",
+      "reverse-engineering-helpers",
+      "kernel-and-driver-analysis"
+    ],
+    "logoPath": "driver_buddy_logo.png",
+    "idaVersions": ">=7.5",
+    "description": "Driver Buddy Revolutions is an IDA Pro plugin for rapid Windows kernel driver triage. It automatically identifies IOCTL handlers, device names, pool tags, and dispatch routines; flags risky memory usage, IRQL issues, and privileged operations; maps taint-style call paths into dangerous sinks; and generates HTML/JSON reports plus an IOCTL PoC harness.",
+    "version": "1.0.0"
+  }
 }
