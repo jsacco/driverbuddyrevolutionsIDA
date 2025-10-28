@@ -2,7 +2,7 @@
   "name": "Driver Buddy Revolutions",
   "id": "driver-buddy-revolutions",
   "filename": "DriverBuddyRevolutions.py",
-  "description": "Single-file IDA Pro plugin for rapid Windows kernel driver research. Identifies IOCTL handlers, device names, pool tags, risky memory usage, IRQL issues, taint paths to dangerous sinks, and more. Generates HTML/JSON reports, a C IOCTL harness, and an in-IDA findings browser.",
+  "description": "IDA Pro plugin for rapid Windows kernel driver triage. Finds IOCTL handlers, device names, pool tags, risky memory usage, IRQL issues and taint paths; generates HTML/JSON reports and IOCTL PoC stubs.",
   "version": "1.0.0",
   "date": "2025-10-24",
   "author": "Juan Sacco",
@@ -10,30 +10,6 @@
   "license": "MIT",
   "ida_min_version": "7.5",
   "ida_max_version": "8.5",
-  "supported_filetypes": [
-    "Portable executable for 80386 (PE)",
-    "Portable executable for AMD64 (PE+)"
-  ],
-  "supported_processors": [
-    "metapc"
-  ],
-  "os": [
-    "windows"
-  ],
-  "type": "plugin",
   "hotkey": "Shift-A",
-  "entrypoint": "PLUGIN_ENTRY",
-  "notes": [
-    "Does not require Hex-Rays.",
-    "Best results on Windows kernel drivers (.sys).",
-    "Writes artifacts (IOCTL list, pool tags, HTML report, JSON export, PoC stub) to the current working directory."
-  ],
-  "outputs": [
-    "*-IOCTLs.txt",
-    "*-PoolTags.txt",
-    "*-DriverBuddyRevolutions_full_autoanalysis.txt",
-    "*-DriverBuddyRevolutions_report.html",
-    "*-DriverBuddyRevolutions_findings.json",
-    "*-ioctl_pocs.c"
-  ]
+  "entrypoint": "PLUGIN_ENTRY"
 }
