@@ -1,5 +1,5 @@
 ## Driver Buddy Revolutions is an IDA Pro plugin that automates common Windows kernel driver research. 
-Install it by dropping DriverBuddyRevolutions.py into your plugins/ directory or just running it as a script. 
+Install it by copying DriverBuddyRevolutions.py into your plugins/ directory or running it as a script. 
 Hotkey: Shift-A.
 
 ### What it does:
@@ -29,7 +29,7 @@ Saves a timestamped text file of all discovered IOCTLs.
 
 Generates an optional C stub harness that calls every discovered IOCTL via DeviceIoControl, so you can quickly exercise them (you still have to fill in the real device name and build it yourself).
 
-Why you care: this surfaces attack surface fast — which IOCTLs look abusable, and where in the code they’re handled.
+### Why you care: this surfaces attack surface fast — which IOCTLs look abusable, and where in the code they’re handled.
 
 2. Dispatch handler discovery
 
