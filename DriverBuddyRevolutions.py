@@ -63,7 +63,7 @@ c_functions = [
     "_itoa","_i64toa","_i64tow","_itow","_ui64toa","_ui64tot","_ui64tow","_ultoa","_ultot","_ultow",
     "scanf","cscanf","_cscanf","_cscanf_l","_cwscanf","_cwscanf_l","_sntscanf","_stscanf","_tscanf","fscanf","_fscanf_l",
     "fwscanf","_fwscanf_l","snscanf","snwscanf","sscanf","_sscanf_l","swscanf","_swscanf_l","wscanf","vscanf","vwscanf",
-    "vsscanf","vswscanf","vfscanf","vfwscanf","_snscanf","_snscanf_l","_snwscanf","_snwscanf_l",
+    "vsscanf","vswprintf","vfscanf","vfwscanf","_snscanf","_snscanf_l","_snwscanf","_snwscanf_l",
     "_getts","_gettws","gets","_getws","cgets","_cgets","_cgetws",
     "strlen","_mbslen","_mbslen_l","_mbstrlen","_mbstrlen_l","lstrlen","StrLen","wcslen",
     "CopyMemory","RtlCopyMemory","memcpy","wmemcpy","memccpy","_memccpy",
@@ -73,7 +73,7 @@ c_functions = [
     "_aligned_realloc_dbg","_aligned_recalloc","_aligned_recalloc_dbg",
     "_snprintf","_snwprintf","_stprintf","_sntprintf","_swprintf","nsprintf","sprintf","sprintfA","sprintfW","swprintf",
     "std_strlprintf","wnsprintf","wnsprintfA","wnsprintfW","wsprintf","wsprintfA","wsprintfW","wvnsprintf","wvnsprintfA",
-    "wvnsprintfW","wvsprintf","wvsprintfA","wvsprintfW","vsprintf","vsnprintf","vswprintf","_vsnprintf","_vsntprintf",
+    "wvnsprintfW","wvsprintf","wvsprintfA","wvsprintfW","vsprintf","vsnprintf","_vsnprintf","_vsntprintf",
     "_vsnwprintf","_vstprintf",
     "fopen","_wfopen","fopen_s","_wfopen_s","freopen","_wfreopen","freopen_s","_wfreopen_s","_fsopen","_wfsopen",
     "open","_open","_wopen","sopen","_sopen","_wsopen","_sopen_s","_wsopen_s",
@@ -673,6 +673,46 @@ def call_is_c_function(callee_name):
     base = callee_name.split('@')[0].split('::')[-1]
     return base.lower() in _c_functions_lc
 
+# ---------- Linear scan  ----------
+
+def scan_executable_segments_for_mnemonics(mnems):
+    """
+    Linear scan over all executable segments; no reliance on IDA function boundaries.
+    Returns: [(mnem, func_name_or_none, ea), ...]
+    """
+    hits = []
+    insn = idaapi.insn_t()
+    for seg_ea in idautils.Segments():
+        seg = idaapi.getseg(seg_ea)
+        if not seg:
+            continue
+        if (seg.perm & idaapi.SEGPERM_EXEC) == 0:
+            continue
+        ea = seg.start_ea
+        end = seg.end_ea
+        while ea < end:
+            if idaapi.decode_insn(insn, ea):
+                # use idc.print_insn_mnem which returns '' rather than None; guard and lower safely
+                m = (idc.print_insn_mnem(ea) or "").lower()
+                if m in mnems:
+                    fn = idc.get_func_name(ea) or "<no func>"
+                    hits.append((m, fn, ea))
+                ea += insn.size
+            else:
+                ea += 1
+    return hits
+
+def dedup_hits(triples):
+    seen = set()
+    out = []
+    for m, fn, ea in triples:
+        k = (m, ea)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append((m, fn, ea))
+    return out
+
 # ---------------------------- POC / Fuzzer generator ----------------------------
 
 def generate_ioctl_poc_c(ioctls, outpath=POC_C_FILE, device_path="\\\\.\\PUT_DEVICE_NAME_HERE"):
@@ -692,9 +732,6 @@ def generate_ioctl_poc_c(ioctls, outpath=POC_C_FILE, device_path="\\\\.\\PUT_DEV
         "\n"
     ).format(dev=device_path)
 
-    # For each ioctl:
-    # - Escape braces in C blocks: {{ }}
-    # - Escape % in printf with %% so .format() doesn't think it's Python formatting
     pieces = []
     for ea, code in ioctls:
         pieces.append(
@@ -713,7 +750,7 @@ def generate_ioctl_poc_c(ioctls, outpath=POC_C_FILE, device_path="\\\\.\\PUT_DEV
     footer = (
         "    CloseHandle(h);\n"
         "    return 0;\n"
-        "}\n"
+    "}\n"
     )
 
     try:
@@ -750,6 +787,12 @@ def make_html_report(findings, outpath=HTML_REPORT_FILE):
 
     html_parts.append("<h2>Pooltags</h2><pre>%s</pre>"%html.escape(findings.get('pooltags_text',"(none)")))
     html_parts.append("<h2>Device Names</h2><pre>%s</pre>"%html.escape("\n".join(findings.get('devicenames',[]))))
+
+    html_parts.append("<h2>Interesting Opcodes</h2><table border=1 cellpadding=4><tr><th>Severity</th><th>Opcode</th><th>Function</th><th>EA</th></tr>")
+    for sev, mnem, fn, ea in findings.get('opcode_hits', []):
+        html_parts.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
+            html.escape(sev), html.escape(mnem), html.escape(fn or "<no func>"), ea_link(ea)))
+    html_parts.append("</table>")
 
     html_parts.append("<h2>Taint paths (IOCTL -> sink)</h2>")
     for sink, paths in findings.get('taint_paths',{}).items():
@@ -855,13 +898,25 @@ def run_full_analysis():
         except Exception:
             pass
 
+        # ------- Interesting functions/opcodes (now includes segment-wide linear scan) -------
         opcode_hits, c_hits, api_hits = build_interesting_call_lists()
+        segment_opcode_hits = scan_executable_segments_for_mnemonics(set(opcode_severity.keys()))
+        opcode_hits = dedup_hits(opcode_hits + segment_opcode_hits)
+
         findings_lines.append("[>] Scanning for interesting C/C++ functions and opcodes...")
         if c_hits:
             for tgt, fn, ea in sorted(c_hits, key=lambda x:(x[0].lower(), x[1], x[2])):
                 findings_lines.append("  - Found %s in %s at 0x%X" % (tgt, fn, ea))
         else:
-            findings_lines.append("  - (none detected)")
+            findings_lines.append("  - (no libc-style C/C++ calls from list detected)")
+
+        # opcode hits (wrmsr/rdmsr/rdpmc)
+        if opcode_hits:
+            for mnem, fn, ea in sorted(opcode_hits, key=lambda x:(x[0], x[1], x[2])):
+                sev = opcode_severity.get(mnem, "Info")
+                findings_lines.append("  - [%s] %s in %s at 0x%X" % (sev, mnem.upper(), fn, ea))
+        else:
+            findings_lines.append("  - (no interesting opcodes found)")
 
         findings_lines.append("[>] Sensitive heuristics and MDL/IRP checks...")
         sens_lines=[]
@@ -944,6 +999,7 @@ def run_full_analysis():
             "taint_paths": taint_paths,
             "exports": results['exports'],
             "alloca": alloca,
+            "opcode_hits": [(opcode_severity.get(m, "Info"), m, fn, ea) for (m, fn, ea) in opcode_hits],
         }
         results.update(findings)
 
@@ -979,6 +1035,8 @@ def run_full_analysis():
             pass
 
         chooser_items = []
+        for sev, mnem, fn, ea in results.get('opcode_hits', []):
+            chooser_items.append((sev, "Opcode: " + mnem.upper(), "0x%X" % ea, "Function: %s" % (fn or "<no func>")))
         for h in heuristics:
             sev = h.get('severity','Medium')
             title = h.get('title','')
@@ -1005,7 +1063,7 @@ def run_full_analysis():
     except Exception as e:
         ida_kernwin.msg("[!] Driver Buddy crashed: %s\n" % traceback.format_exc())
 
-# ---------------------------- plugin boilerplate ----------------------------
+# ---------------------------- plugin ----------------------------
 
 class driver_buddy_revolutions_full_t(idaapi.plugin_t):
     flags = idaapi.PLUGIN_UNL
@@ -1025,4 +1083,3 @@ class driver_buddy_revolutions_full_t(idaapi.plugin_t):
 
 def PLUGIN_ENTRY():
     return driver_buddy_revolutions_full_t()
-
